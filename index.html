@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fly Eye Media Renderer</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .fly-eye {
+      position: relative;
+      width: 80vw;
+      height: 60vh;
+      overflow: hidden;
+    }
+
+    .fly-eye canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    #mediaInput {
+      display: none;
+    }
+
+    button, label, input {
+      background-color: #333;
+      color: #fff;
+      padding: 5px 10px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    label {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <label for="mediaInput">Upload Media</label>
+    <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
+    <button onclick="zoomIn()">Zoom In</button>
+    <button onclick="zoomOut()">Zoom Out</button>
+  </div>
+
+  <div class="fly-eye">
+    <canvas id="flyEyeCanvas"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('flyEyeCanvas');
+    const ctx = canvas.getContext('2d');
+    const mediaInput = document.getElementById('mediaInput');
+
+    let mediaFiles = [];
+    let mediaIndex = 0;
+    let hexRadius = 30;  // Initial radius of each hexagonal cell
+    let hexWidth, hexHeight;
+
+    // Adjust hex size for zooming
+    function zoomIn() {
+      hexRadius += 5;
+      renderFlyEye();
+    }
+
+    function zoomOut() {
+      hexRadius = Math.max(10, hexRadius - 5);  // Minimum radius
+      renderFlyEye();
+    }
+
+    // Load media files
+    mediaInput.addEventListener('change', (event) => {
+      mediaFiles = Array.from(event.target.files);
+      mediaIndex = 0;
+      loadMedia();
+    });
+
+    // Load each media file, one by one
+    async function loadMedia() {
+      if (!mediaFiles.length) return;
+
+      const file = mediaFiles[mediaIndex];
+      if (file.type.startsWith('image/')) {
+        media = new Image();
+        media.src = URL.createObjectURL(file);
+        media.onload = () => {
+          renderFlyEye();
+        };
+      } else if (file.type.startsWith('video/')) {
+        media = document.createElement('video');
+        media.src = URL.createObjectURL(file);
+        media.autoplay = true;
+        media.loop = true;
+        media.muted = true;
+        media.play();
+        media.addEventListener('play', renderFlyEye);
+      }
+    }
+
+    // Main rendering function
+    function renderFlyEye() {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+      hexWidth = hexRadius * Math.sqrt(3);
+      hexHeight = 2 * hexRadius;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < canvas.height + hexRadius; y += hexHeight * 0.75) {
+        for (let x = 0; x < canvas.width + hexWidth; x += hexWidth) {
+          const offsetX = (y / hexHeight) % 2 === 0 ? 0 : hexWidth / 2;
+          const hexX = x + offsetX;
+          const hexY = y;
+          const hexID = `hex_${Math.round(hexX)}_${Math.round(hexY)}`;
+          drawHexagon(hexX, hexY, hexID);
+        }
+      }
+
+      // Loop for video media
+      if (media && media.tagName === 'VIDEO' && !media.paused) {
+        requestAnimationFrame(renderFlyEye);
+      }
+    }
+
+    // Draw each hexagonal cell
+    function drawHexagon(x, y, hexID) {
+      const hexPath = new Path2D();
+
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 3 * i;
+        const px = x + hexRadius * Math.cos(angle);
+        const py = y + hexRadius * Math.sin(angle);
+        if (i === 0) hexPath.moveTo(px, py);
+        else hexPath.lineTo(px, py);
+      }
+      hexPath.closePath();
+
+      ctx.save();
+      ctx.clip(hexPath);
+
+      if (media) {
+        ctx.drawImage(media, x - hexRadius, y - hexRadius, 2 * hexRadius, 2 * hexRadius);
+      }
+      
+      ctx.restore();
+
+      // Label each hexagon with its ID
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '10px Arial';
+      ctx.fillText(hexID, x - hexRadius / 2, y);
+    }
+
+    // Automatically cycle through media in multiple-media mode
+    setInterval(() => {
+      if (mediaFiles.length > 1) {
+        mediaIndex = (mediaIndex + 1) % mediaFiles.length;
+        loadMedia();
+      }
+    }, 5000);  // Change media every 5 seconds
+  </script>
+</body>
+</html>
