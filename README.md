@@ -1,6 +1,10 @@
 # Fly Eye Media Renderer: THEM
 
 > **Logline:** A novel AI media renderer that simulates a fly’s compound-eye perspective, allowing users to visualize the unique, multi-perspective world of AI as it engages simultaneously with thousands of individuals.
+>
+
+![image](https://github.com/user-attachments/assets/23afe280-3385-4e24-8a8e-23c8de7ce26b)
+
 
 ---
 
